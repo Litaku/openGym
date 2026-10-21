@@ -40,6 +40,12 @@ const PORT = +(process.env.PORT || 3000);
 const DATA = process.env.DATA_DIR || '/data';
 const RP_ID = process.env.RP_ID || 'localhost';
 const ORIGIN = process.env.ORIGIN || 'http://localhost:8080';
+// The Android app never presents the https origin: Credential Manager reports
+// `android:apk-key-hash:<base64 sha256 of the APK signing certificate>` instead.
+const ANDROID_ORIGIN = process.env.ANDROID_ORIGIN || null;
+// Origins a WebAuthn ceremony may come from. A plain string while no app origin is
+// configured, so the web-only flow stays exactly as it was.
+const ALLOWED_ORIGINS = ANDROID_ORIGIN ? [ORIGIN, ANDROID_ORIGIN] : ORIGIN;
 const RP_NAME = process.env.RP_NAME || 'openGym';
 // Admin dashboard (issue): admins are matched by uid (or the admin flag FIRST_USER_ADMIN sets);
 // INVITE_ONLY gates new signups behind a code the admin generates. Off by default, so a fresh
@@ -1126,7 +1132,7 @@ async function passkeyStepUp(user, body) {
   if (!cred) return false;
   try {
     const v = await verifyAuthenticationResponse({
-      response: body.credential, expectedChallenge: c.challenge, expectedOrigin: ORIGIN, expectedRPID: RP_ID,
+      response: body.credential, expectedChallenge: c.challenge, expectedOrigin: ALLOWED_ORIGINS, expectedRPID: RP_ID,
       requireUserVerification: false,
       credential: { id: cred.id, publicKey: b64uToBuf(cred.publicKey), counter: cred.counter, transports: cred.transports }
     });
@@ -1557,7 +1563,7 @@ async function newPasskey(req, res, c, body, ev, user) {
   let verification;
   try {
     verification = await verifyRegistrationResponse({
-      response: body.credential, expectedChallenge: c.challenge, expectedOrigin: ORIGIN, expectedRPID: RP_ID,
+      response: body.credential, expectedChallenge: c.challenge, expectedOrigin: ALLOWED_ORIGINS, expectedRPID: RP_ID,
       requireUserVerification: false
     });
   } catch (e) {
@@ -1994,7 +2000,7 @@ const routes = {
       verification = await verifyRegistrationResponse({
         response: body.credential,
         expectedChallenge: c.challenge,
-        expectedOrigin: ORIGIN,
+        expectedOrigin: ALLOWED_ORIGINS,
         expectedRPID: RP_ID,
         requireUserVerification: false
       });
@@ -2066,7 +2072,7 @@ const routes = {
       verification = await verifyAuthenticationResponse({
         response: body.credential,
         expectedChallenge: c.challenge,
-        expectedOrigin: ORIGIN,
+        expectedOrigin: ALLOWED_ORIGINS,
         expectedRPID: RP_ID,
         requireUserVerification: false,
         credential: {

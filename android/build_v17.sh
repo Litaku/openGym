@@ -2,14 +2,22 @@
 # build_v17.sh — 手动构建 OpenGym v1.7 APK（PasskeyBridge + 所有 v1.6 优化）
 set -e
 
-PROJECT="/c/Users/I578337/Documents/Scripts/GymLitakuApp"
+PROJECT="${PROJECT:-/c/Users/I578337/Documents/Scripts/GymLitakuApp}"
 SDK="/c/Users/I578337/Documents/Scripts/android-sdk-setup/sdk"
 BUILD_TOOLS="$SDK/build-tools/34.0.0"
 PLATFORM="$SDK/platforms/android-34/android.jar"
 JDK="/c/Users/I578337/.jdks/corretto-18.0.2"
 KEYSTORE="$PROJECT/gym_litaku_release.keystore"
-KEY_ALIAS="gym_litaku"
-KEY_PASS="litaku2024"
+# 签名配置：密码只从环境变量或 key.properties 读取，绝不写死在仓库里
+KEY_ALIAS="${KEY_ALIAS:-gym_litaku}"
+KEY_PASS="${KEY_PASS:-}"
+if [ -z "$KEY_PASS" ] && [ -f "$PROJECT/key.properties" ]; then
+  KEY_PASS=$(sed -n 's/^storePassword=//p' "$PROJECT/key.properties" | head -1)
+fi
+if [ -z "$KEY_PASS" ]; then
+  echo "错误: 未提供签名密码。请设置 KEY_PASS 环境变量，或在 $PROJECT/key.properties 中配置 storePassword" >&2
+  exit 1
+fi
 
 MANUAL="$PROJECT/build_manual"
 SRC="$PROJECT/app/src/main"

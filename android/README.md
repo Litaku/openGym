@@ -157,6 +157,32 @@ Android Credential Manager API
 OpenGym API（ALLOWED_ORIGINS 同时接受网页和 Android origin）
 ```
 
+## 部署与 App 的对应关系
+
+本仓库 `docker compose up -d --build` 起来的服务端，已经内置与 `releases/` 里 APK 对应的配置：
+
+- `docker-compose.yml` 里的 `ANDROID_ORIGIN` 默认值就是当前签名证书的 origin，
+  API 端同时接受网页 origin 和该 Android origin（`api/server.js` 的 `ALLOWED_ORIGINS`）。
+- 同一个 APK 挂载到 web 容器的 `/app.apk`，部署后可直接在同一域名下载，保证"服务端版本 ↔ App 版本"一致。
+
+当前签名证书（`CN=litaku.cn`，SHA-256 指纹 `24:B0:46:A3:…:B8:71`）对应的 origin：
+
+```
+ANDROID_ORIGIN=android:apk-key-hash:JLBGo5uwje30ph6KMWCAV6rOE3/toYys6P71E0O4uHE
+```
+
+换了签名密钥、或发布了新版本 APK，需要同步两处：
+
+1. 把新的 APK 放进 `android/releases/`，并改 `.env` 的 `APK_FILE`；
+2. 用新的 APK 重算 origin，写入 `.env` 的 `ANDROID_ORIGIN`：
+
+```bash
+keytool -printcert -jarfile OpenGym_vX.Y.apk | grep SHA256
+# 取冒号后的 32 字节十六进制，转成无填充 base64，前面加 android:apk-key-hash:
+```
+
+换密钥会改变 origin，但 `RP_ID` 不变，已有 passkey 凭据仍然可用。
+
 ## 许可
 
 本项目仅供 [gym.litaku.cn](https://gym.litaku.cn) 自用，基于 [OpenGym](https://github.com/duartesantos8/opengym) 开源项目构建。

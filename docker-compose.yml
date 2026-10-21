@@ -24,6 +24,11 @@ services:
       # X-Forwarded-For / X-Real-IP with the real peer — so the sign-in throttle may count
       # requests by those headers instead of lumping everyone in as "the web container".
       - TRUST_PROXY=${TRUST_PROXY:-1}
+      # Origin the Android app presents (android:apk-key-hash:<base64 sha256 of the
+      # signing certificate>). Defaults to the certificate of the APK shipped in
+      # android/releases, so a plain `docker compose up` already accepts the app;
+      # override ANDROID_ORIGIN in .env when the APK is signed with another key.
+      - ANDROID_ORIGIN=${ANDROID_ORIGIN:-android:apk-key-hash:JLBGo5uwje30ph6KMWCAV6rOE3/toYys6P71E0O4uHE}
     volumes:
       - ./data:/data         # users, passkeys, per-user state, session secret — BACK THIS UP
                              # (and uploads/: the photos and videos of custom exercises)
@@ -45,6 +50,11 @@ services:
         condition: service_started
     ports:
       - "${WEB_PORT:-8080}:${NGINX_PORT:-80}"
+    volumes:
+      # The Android build that belongs to this deployment, served at /app.apk on the
+      # same origin as the web app (the file comes from android/releases/ in this repo).
+      # Move APK_FILE in .env to a newer release when one ships.
+      - "${APK_FILE:-./android/releases/OpenGym_v1.7.apk}:/usr/share/nginx/html/app.apk:ro"
     # nginx renders its config at start-up from these (web/nginx.conf.template),
     # so the API service does not have to be called `api`. Defaults are the old
     # hardcoded values, so an existing .env and an existing stack are unaffected.
